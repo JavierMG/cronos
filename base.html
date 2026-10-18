@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Cronómetro de Entrenamiento</title>
+  <title>Cronómetro de Entrenamiento por Bloques</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -22,35 +22,75 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: space-around;
+      justify-content: space-between;
       padding: calc(20px + env(safe-area-inset-top)) 20px calc(20px + env(safe-area-inset-bottom)) 20px;
       background-color: #121212;
     }
 
+    /* Selector de modo / intervalo */
+    .mode-selector-container {
+      width: 100%;
+      max-width: 500px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 5px;
+    }
+
+    .mode-label {
+      font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+      color: #a0a0a0;
+      font-weight: 600;
+    }
+
+    select.mode-select {
+      background-color: #2a2a2a;
+      color: #ffffff;
+      border: 2px solid #3a3a3a;
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: clamp(0.95rem, 2.5vw, 1.15rem);
+      font-weight: bold;
+      outline: none;
+      cursor: pointer;
+    }
+
+    select.mode-select:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Encabezado superior principal */
     .round-info { 
-      font-size: clamp(1.8rem, 5vw, 3rem); 
+      font-size: clamp(1.6rem, 4.5vw, 2.5rem); 
       color: #a0a0a0; 
       font-weight: 600;
       text-align: center;
     }
 
+    /* Nombre del movimiento/ejercicio (Destacado) */
     .step-info { 
-      font-size: clamp(1.5rem, 4vw, 2.5rem); 
-      font-weight: bold; 
+      font-size: clamp(2rem, 6vw, 3.5rem); 
+      font-weight: 800; 
       text-align: center;
+      line-height: 1.2;
+      margin: 5px 0;
     }
 
+    /* Colores dinámicos por estado */
     .color-prep { color: #ffb300; }
     .color-warmup { color: #2196f3; }
     .color-work { color: #ff3b30; } 
     .color-rest { color: #ff9100; }
 
+    /* Número gigante central */
     .timer { 
-      font-size: clamp(7rem, 25vw, 16rem); 
+      font-size: clamp(8rem, 28vw, 18rem); 
       font-weight: 800; 
       font-family: monospace; 
       line-height: 1;
-      margin: 10px 0;
+      margin: 0;
     }
 
     .controls { 
@@ -59,7 +99,7 @@
       justify-content: center; 
       width: 100%;
       max-width: 500px;
-      margin-bottom: 20px;
+      margin-bottom: 10px;
     }
 
     button {
@@ -83,7 +123,18 @@
 <body>
 
 <div class="app-viewport" id="appViewport">
-  <div class="round-info" id="roundLabel">Preparación</div>
+  
+  <!-- Desplegable para seleccionar el tipo de intervalo -->
+  <div class="mode-selector-container">
+    <label for="intervalMode" class="mode-label">Intervalo:</label>
+    <select id="intervalMode" class="mode-select" onchange="changeMode()">
+      <option value="20-20">20s Trabajo / 20s Descanso</option>
+      <option value="25-15">25s Trabajo / 15s Descanso</option>
+      <option value="30-10">30s Trabajo / 10s Descanso</option>
+    </select>
+  </div>
+
+  <div class="round-info" id="roundLabel">Fase previa</div>
   <div class="step-info color-prep" id="stepLabel">Prepárate</div>
   <div class="timer" id="timerDisplay">10</div>
   
@@ -94,31 +145,43 @@
 </div>
 
 <script>
+  let selectedWorkTime = 20;
+  let selectedRestTime = 20;
+
   function buildWorkoutSchedule() {
     const schedule = [];
 
+    // 1. Preparación (10s)
     schedule.push({ name: "Fase previa", step: "Prepárate", time: 10, type: "prep" });
-    schedule.push({ name: "Calentamiento", step: "Calentamiento", time: 240, type: "warmup" });
+
+    // 2. Calentamiento (4 min = 240s)
+    schedule.push({ name: "Bloque Inicial", step: "Calentamiento", time: 240, type: "warmup" });
+
+    // 3. Descanso de transición (1 min = 60s)
     schedule.push({ name: "Transición", step: "Descanso", time: 60, type: "rest" });
 
+    // 4. Bloques de trabajo 1, 2 y 3
     for (let block = 1; block <= 3; block++) {
       for (let round = 1; round <= 3; round++) {
         for (let mov = 1; mov <= 3; mov++) {
+          const exerciseName = `Movimiento ${mov}`;
+
           schedule.push({ 
-            name: `Bloque ${block} - Ronda ${round}/3`, 
-            step: `Trabajo (Movimiento ${mov})`, 
-            time: 20, 
+            name: `Bloque ${block} · Ronda ${round}/3`, 
+            step: exerciseName, 
+            time: selectedWorkTime, 
             type: "work" 
           });
           schedule.push({ 
-            name: `Bloque ${block} - Ronda ${round}/3`, 
-            step: `Descanso (Movimiento ${mov})`, 
-            time: 20, 
+            name: `Bloque ${block} · Ronda ${round}/3`, 
+            step: `Descanso (${exerciseName})`, 
+            time: selectedRestTime, 
             type: "rest" 
           });
         }
       }
 
+      // Descanso entre bloques de 1 min
       if (block < 3) {
         schedule.push({ name: `Fin Bloque ${block}`, step: "Descanso largo", time: 60, type: "rest" });
       }
@@ -127,7 +190,7 @@
     return schedule;
   }
 
-  const workoutSchedule = buildWorkoutSchedule();
+  let workoutSchedule = buildWorkoutSchedule();
   let currentIndex = 0;
   let timeLeft = workoutSchedule[0].time;
   let timerInterval = null;
@@ -138,6 +201,22 @@
   const roundLabel = document.getElementById('roundLabel');
   const stepLabel = document.getElementById('stepLabel');
   const appViewport = document.getElementById('appViewport');
+  const intervalSelect = document.getElementById('intervalMode');
+
+  function changeMode() {
+    const val = intervalSelect.value;
+    if (val === "20-20") {
+      selectedWorkTime = 20;
+      selectedRestTime = 20;
+    } else if (val === "25-15") {
+      selectedWorkTime = 25;
+      selectedRestTime = 15;
+    } else if (val === "30-10") {
+      selectedWorkTime = 30;
+      selectedRestTime = 10;
+    }
+    resetTimer();
+  }
 
   function initAudio() {
     if (!audioCtx) {
@@ -240,6 +319,7 @@
   async function startTimer() {
     if (timerInterval) return;
 
+    intervalSelect.disabled = true; // Deshabilitar cambio de modo en marcha
     enterFullscreen();
     await requestWakeLock();
     initAudio();
@@ -270,6 +350,7 @@
       roundLabel.textContent = "¡Completado!";
       stepLabel.textContent = "Entrenamiento finalizado";
       stepLabel.className = "step-info color-work";
+      intervalSelect.disabled = false;
       return;
     }
 
@@ -282,6 +363,8 @@
     clearInterval(timerInterval);
     timerInterval = null;
     releaseWakeLock();
+    intervalSelect.disabled = false;
+    workoutSchedule = buildWorkoutSchedule();
     currentIndex = 0;
     timeLeft = workoutSchedule[0].time;
     updateDisplay();
