@@ -118,43 +118,53 @@
     }
   }
 
-  function playBeep(frequency = 600, duration = 150, type = 'sine') {
+  // Generador de efecto campana (con resonancia metálica y desvanecimiento largo)
+  function playBell(frequency = 587.33, duration = 1200) { // 587.33 Hz (Nota D5, sonido campana clásica)
     try {
       initAudio();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
+      const now = audioCtx.currentTime;
 
-      osc.type = type;
-      osc.frequency.value = frequency;
+      // Usamos varios osciladores para simular los armónicos metálicos de una campana real
+      const harmonics = [1, 2.02, 3.01]; 
+      const gains = [0.4, 0.2, 0.1];
 
-      gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration / 1000);
+      harmonics.forEach((harmonic, index) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
 
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(frequency * harmonic, now);
 
-      osc.start();
-      osc.stop(audioCtx.currentTime + duration / 1000);
+        // Desvanecimiento lento (efecto resonancia de campana)
+        gain.gain.setValueAtTime(gains[index], now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + duration / 1000);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start(now);
+        osc.stop(now + duration / 1000);
+      });
     } catch (e) {
       console.error(e);
     }
   }
 
   function playTickSound() {
-    playBeep(500, 80);
+    playBell(440, 300); // Campana más suave para la cuenta atrás
   }
 
   function playChangeSound() {
-    playBeep(600, 100);
-    setTimeout(() => playBeep(800, 150), 150);
+    playBell(587.33, 1000); // Campana principal al cambiar de intervalo
   }
 
   function playStartSound() {
-    playBeep(1000, 300, 'triangle');
+    playBell(659.25, 1200); // Campana de inicio de ronda
   }
 
   function playEndSound() {
-    playBeep(900, 400, 'triangle');
+    playBell(523.25, 1500); // Campana grave de finalización
+    setTimeout(() => playBell(783.99, 2000), 300); // Doble campanazo final épico
   }
 
   async function requestWakeLock() {
@@ -207,7 +217,6 @@
       if (timeLeft > 1) {
         timeLeft--;
         timerDisplay.textContent = timeLeft;
-        // Pitidos de cuenta atrás en los últimos 3 segundos de preparación
         if (isPreparing && timeLeft <= 3) {
           playTickSound();
         }
