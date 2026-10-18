@@ -118,15 +118,14 @@
     }
   }
 
-  // Generador de efecto campana (con resonancia metálica y desvanecimiento largo)
-  function playBell(frequency = 587.33, duration = 1200) { // 587.33 Hz (Nota D5, sonido campana clásica)
+  // Generador de campana con volumen máximo potenciado
+  function playBell(frequency = 650, duration = 800) {
     try {
       initAudio();
       const now = audioCtx.currentTime;
 
-      // Usamos varios osciladores para simular los armónicos metálicos de una campana real
       const harmonics = [1, 2.02, 3.01]; 
-      const gains = [0.4, 0.2, 0.1];
+      const gains = [0.8, 0.4, 0.2]; // Volumen duplicado para mayor presencia
 
       harmonics.forEach((harmonic, index) => {
         const osc = audioCtx.createOscillator();
@@ -135,7 +134,6 @@
         osc.type = 'sine';
         osc.frequency.setValueAtTime(frequency * harmonic, now);
 
-        // Desvanecimiento lento (efecto resonancia de campana)
         gain.gain.setValueAtTime(gains[index], now);
         gain.gain.exponentialRampToValueAtTime(0.0001, now + duration / 1000);
 
@@ -151,20 +149,25 @@
   }
 
   function playTickSound() {
-    playBell(440, 300); // Campana más suave para la cuenta atrás
+    playBell(500, 200); // Campana sutil para cuenta atrás
   }
 
+  // 3 campanadas cortas y rápidas (cambio de intervalo)
   function playChangeSound() {
-    playBell(587.33, 1000); // Campana principal al cambiar de intervalo
+    playBell(700, 300);
+    setTimeout(() => playBell(700, 300), 150);
+    setTimeout(() => playBell(700, 300), 300);
   }
 
   function playStartSound() {
-    playBell(659.25, 1200); // Campana de inicio de ronda
+    playChangeSound();
   }
 
+  // 3 campanadas más largas, graves y resonantes (final)
   function playEndSound() {
-    playBell(523.25, 1500); // Campana grave de finalización
-    setTimeout(() => playBell(783.99, 2000), 300); // Doble campanazo final épico
+    playBell(400, 1500);
+    setTimeout(() => playBell(400, 1500), 400);
+    setTimeout(() => playBell(400, 2200), 800);
   }
 
   async function requestWakeLock() {
