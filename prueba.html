@@ -100,13 +100,57 @@
   let timeLeft = sequence[0];
   let timerInterval = null;
   let wakeLock = null;
+  let audioCtx = null;
 
   const timerDisplay = document.getElementById('timerDisplay');
   const roundLabel = document.getElementById('roundLabel');
   const stepLabel = document.getElementById('stepLabel');
   const appViewport = document.getElementById('appViewport');
 
-  // Función para mantener la pantalla encendida
+  // Inicializar o reanudar el contexto de audio (necesario por políticas del navegador)
+  function initAudio() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+  }
+
+  // Función para generar pitidos electrónicos limpios
+  function playBeep(frequency = 600, duration = 150, type = 'sine') {
+    try {
+      initAudio();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = type;
+      osc.frequency.value = frequency;
+
+      gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration / 1000);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration / 1000);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // Sonido de cambio de intervalo (dos pitidos cortos)
+  function playChangeSound() {
+    playBeep(600, 100);
+    setTimeout(() => playBeep(800, 150), 150);
+  }
+
+  // Sonido de fin de entrenamiento (pitido largo y agudo)
+  function playEndSound() {
+    playBeep(900, 400, 'triangle');
+  }
+
   async function requestWakeLock() {
     if ('wakeLock' in navigator) {
       try {
@@ -144,9 +188,9 @@
   async function startTimer() {
     if (timerInterval) return;
 
-    // Activa pantalla completa y bloqueo de apagado a la vez
     enterFullscreen();
     await requestWakeLock();
+    initAudio(); // Desbloquea el audio con la interacción del usuario
 
     timerInterval = setInterval(() => {
       if (timeLeft > 0) {
@@ -169,11 +213,15 @@
       clearInterval(timerInterval);
       timerInterval = null;
       releaseWakeLock();
+      playEndSound();
       timerDisplay.textContent = "FIN";
       roundLabel.textContent = "¡Completado!";
       stepLabel.textContent = "";
       return;
     }
+
+    // Suena al cambiar de bloque o ronda
+    playChangeSound();
 
     timeLeft = sequence[currentStep];
     updateDisplay();
@@ -193,7 +241,6 @@
     updateDisplay();
   }
 
-  // Re-activar si se minimiza y vuelve a abrir
   document.addEventListener('visibilitychange', async () => {
     if (wakeLock !== null && document.visibilityState === 'visible') {
       await requestWakeLock();
