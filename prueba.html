@@ -80,9 +80,9 @@
 <body>
 
 <div class="app-viewport" id="appViewport">
-  <div class="round-info" id="roundLabel">Ronda 1 / 3</div>
-  <div class="step-info" id="stepLabel">Bloque: 60 seg</div>
-  <div class="timer" id="timerDisplay">60</div>
+  <div class="round-info" id="roundLabel">Preparación</div>
+  <div class="step-info" id="stepLabel">Prepárate</div>
+  <div class="timer" id="timerDisplay">10</div>
   
   <div class="controls">
     <button class="btn-start" onclick="startTimer()">Iniciar</button>
@@ -93,11 +93,13 @@
 
 <script>
   const rounds = 3;
+  const prepTime = 10;
   const sequence = [60, 45, 30, 15];
   
+  let isPreparing = true;
   let currentRound = 0;
   let currentStep = 0;
-  let timeLeft = sequence[0];
+  let timeLeft = prepTime;
   let timerInterval = null;
   let wakeLock = null;
   let audioCtx = null;
@@ -107,7 +109,6 @@
   const stepLabel = document.getElementById('stepLabel');
   const appViewport = document.getElementById('appViewport');
 
-  // Inicializar o reanudar el contexto de audio (necesario por políticas del navegador)
   function initAudio() {
     if (!audioCtx) {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -117,7 +118,6 @@
     }
   }
 
-  // Función para generar pitidos electrónicos limpios
   function playBeep(frequency = 600, duration = 150, type = 'sine') {
     try {
       initAudio();
@@ -140,13 +140,19 @@
     }
   }
 
-  // Sonido de cambio de intervalo (dos pitidos cortos)
+  function playTickSound() {
+    playBeep(500, 80);
+  }
+
   function playChangeSound() {
     playBeep(600, 100);
     setTimeout(() => playBeep(800, 150), 150);
   }
 
-  // Sonido de fin de entrenamiento (pitido largo y agudo)
+  function playStartSound() {
+    playBeep(1000, 300, 'triangle');
+  }
+
   function playEndSound() {
     playBeep(900, 400, 'triangle');
   }
@@ -181,8 +187,13 @@
 
   function updateDisplay() {
     timerDisplay.textContent = timeLeft;
-    roundLabel.textContent = `Ronda ${currentRound + 1} / ${rounds}`;
-    stepLabel.textContent = `Bloque: ${sequence[currentStep]} seg`;
+    if (isPreparing) {
+      roundLabel.textContent = "Preparación";
+      stepLabel.textContent = "Prepárate";
+    } else {
+      roundLabel.textContent = `Ronda ${currentRound + 1} / ${rounds}`;
+      stepLabel.textContent = `Bloque: ${sequence[currentStep]} seg`;
+    }
   }
 
   async function startTimer() {
@@ -190,12 +201,16 @@
 
     enterFullscreen();
     await requestWakeLock();
-    initAudio(); // Desbloquea el audio con la interacción del usuario
+    initAudio();
 
     timerInterval = setInterval(() => {
-      if (timeLeft > 0) {
+      if (timeLeft > 1) {
         timeLeft--;
         timerDisplay.textContent = timeLeft;
+        // Pitidos de cuenta atrás en los últimos 3 segundos de preparación
+        if (isPreparing && timeLeft <= 3) {
+          playTickSound();
+        }
       } else {
         advanceSequence();
       }
@@ -203,6 +218,16 @@
   }
 
   function advanceSequence() {
+    if (isPreparing) {
+      isPreparing = false;
+      timeLeft = sequence[0];
+      currentStep = 0;
+      currentRound = 0;
+      playStartSound();
+      updateDisplay();
+      return;
+    }
+
     currentStep++;
     if (currentStep >= sequence.length) {
       currentStep = 0;
@@ -220,9 +245,7 @@
       return;
     }
 
-    // Suena al cambiar de bloque o ronda
     playChangeSound();
-
     timeLeft = sequence[currentStep];
     updateDisplay();
   }
@@ -235,9 +258,10 @@
 
   function resetTimer() {
     pauseTimer();
+    isPreparing = true;
     currentRound = 0;
     currentStep = 0;
-    timeLeft = sequence[0];
+    timeLeft = prepTime;
     updateDisplay();
   }
 
