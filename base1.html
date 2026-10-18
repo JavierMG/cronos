@@ -40,7 +40,6 @@
       text-align: center;
     }
 
-    /* Colores dinámicos (Trabajo cambiado a rojo) */
     .color-prep { color: #ffb300; }
     .color-warmup { color: #2196f3; }
     .color-work { color: #ff3b30; } 
@@ -260,10 +259,6 @@
   }
 
   function advanceSequence() {
-    if (isPreparing) { // Nota: ajustado flujo general en currentIndex
-      // Omitido flag isPreparing antiguo, controlado por índice directamente en schedule
-    }
-
     currentIndex++;
 
     if (currentIndex >= workoutSchedule.length) {
