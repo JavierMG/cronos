@@ -118,14 +118,13 @@
     }
   }
 
-  // Generador de campana con volumen máximo potenciado
   function playBell(frequency = 650, duration = 800) {
     try {
       initAudio();
       const now = audioCtx.currentTime;
 
       const harmonics = [1, 2.02, 3.01]; 
-      const gains = [0.8, 0.4, 0.2]; // Volumen duplicado para mayor presencia
+      const gains = [0.8, 0.4, 0.2];
 
       harmonics.forEach((harmonic, index) => {
         const osc = audioCtx.createOscillator();
@@ -149,21 +148,17 @@
   }
 
   function playTickSound() {
-    playBell(500, 200); // Campana sutil para cuenta atrás
+    playBell(500, 200);
   }
 
-  // 3 campanadas cortas y rápidas (cambio de intervalo)
+  // 3 campanadas cortas y rápidas (al terminar intervalo)
   function playChangeSound() {
     playBell(700, 300);
     setTimeout(() => playBell(700, 300), 150);
     setTimeout(() => playBell(700, 300), 300);
   }
 
-  function playStartSound() {
-    playChangeSound();
-  }
-
-  // 3 campanadas más largas, graves y resonantes (final)
+  // 3 campanadas más largas, graves y resonantes (final de todo)
   function playEndSound() {
     playBell(400, 1500);
     setTimeout(() => playBell(400, 1500), 400);
@@ -217,10 +212,10 @@
     initAudio();
 
     timerInterval = setInterval(() => {
-      if (timeLeft > 1) {
+      if (timeLeft > 0) {
         timeLeft--;
         timerDisplay.textContent = timeLeft;
-        if (isPreparing && timeLeft <= 3) {
+        if (isPreparing && timeLeft > 0 && timeLeft <= 3) {
           playTickSound();
         }
       } else {
@@ -231,11 +226,11 @@
 
   function advanceSequence() {
     if (isPreparing) {
+      playChangeSound(); // Suenan al acabar la preparación
       isPreparing = false;
       timeLeft = sequence[0];
       currentStep = 0;
       currentRound = 0;
-      playStartSound();
       updateDisplay();
       return;
     }
@@ -257,7 +252,7 @@
       return;
     }
 
-    playChangeSound();
+    playChangeSound(); // Suenan al acabar cada bloque intermedio
     timeLeft = sequence[currentStep];
     updateDisplay();
   }
